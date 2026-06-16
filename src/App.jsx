@@ -88,7 +88,7 @@ function App() {
   return (
     <div className="game-container">
       <header className="header">
-        <h1>Type Master Kids</h1>
+        <h1>Tappy Typers</h1>
         <div className="header-controls">
           {userName && <span className="user-name">👤 {userName}</span>}
           <button className="control-btn" onClick={handleLoad}>📂 Load</button>
