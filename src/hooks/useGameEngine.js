@@ -47,16 +47,29 @@ export const useGameEngine = () => {
     if (e.key === targetKey) {
       if (currentIndex + 1 >= sequence.length) {
         // Sequence completed! Evaluate accuracy
-        if (mistakesInAttempt < 2) {
-          setLevelProgress((prev) => {
-            const currentProgress = prev[currentLevel] || 0;
-            const newProgress = Math.min(currentProgress + 1, 3);
-            if (newProgress === 3 && currentProgress < 3) {
-              setShowSuccessModal(true);
-            }
-            return { ...prev, [currentLevel]: newProgress };
-          });
-        }
+        const result = mistakesInAttempt < 2 ? 'success' : 'fail';
+        
+        setLevelProgress((prev) => {
+          const currentProgress = prev[currentLevel] || [];
+          // Ensure migration from old number format if needed (handled mostly in load, but just in case)
+          const history = Array.isArray(currentProgress) ? currentProgress : Array(currentProgress).fill('success');
+          
+          const newHistory = [...history, result];
+          const lastThree = newHistory.slice(-3);
+          
+          if (lastThree.length === 3 && lastThree.every(r => r === 'success') && history.length < newHistory.length) {
+             // Only show modal if they just hit 3 successes (this prevents spamming modal if they play after 3 successes, though usually they move on)
+             // Wait, if they already have 3 successes, maybe they play again. Let's just pop it if last 3 are success.
+             // Actually, if they play again and get a 4th success, the last 3 are still success. We might show it again.
+             // That's fine for now, or we can check if `history`'s last 3 weren't all success.
+             const oldLastThree = history.slice(-3);
+             const oldWasSuccess = oldLastThree.length === 3 && oldLastThree.every(r => r === 'success');
+             if (!oldWasSuccess) {
+               setShowSuccessModal(true);
+             }
+          }
+          return { ...prev, [currentLevel]: lastThree };
+        });
         
         const levelData = CURRICULUM[currentLevel];
         setSequence(generateSequence(levelData.keys, 10));

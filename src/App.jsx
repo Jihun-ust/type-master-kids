@@ -39,7 +39,12 @@ function App() {
       setFileHandle(result.fileHandle);
       setUserName(result.data.userName || 'User');
       if (result.data.levelProgress) {
-        setLevelProgress(result.data.levelProgress);
+        // Migration logic: convert old number-based progress to arrays
+        const migratedProgress = {};
+        for (const [key, val] of Object.entries(result.data.levelProgress)) {
+          migratedProgress[key] = Array.isArray(val) ? val : Array(val).fill('success');
+        }
+        setLevelProgress(migratedProgress);
       }
       if (typeof result.data.currentLevel === 'number') {
         setCurrentLevel(result.data.currentLevel);
@@ -127,7 +132,9 @@ function App() {
                 <h3 className="level-group-title">{group}</h3>
                 <div className="level-group-buttons">
                   {groupLevels.map((lvl) => {
-                    const checks = levelProgress[lvl.originalIndex] || 0;
+                    const history = levelProgress[lvl.originalIndex];
+                    const safeHistory = Array.isArray(history) ? history : Array(history || 0).fill('success');
+                    const lastThree = safeHistory.slice(-3);
                     return (
                       <button 
                         key={lvl.id} 
@@ -135,9 +142,11 @@ function App() {
                         onClick={() => setCurrentLevel(lvl.originalIndex)}
                       >
                         <span className="level-name">{lvl.display}</span>
-                        {checks > 0 && (
+                        {lastThree.length > 0 && (
                           <span className="level-checks">
-                            {'✅'.repeat(checks)}
+                            {lastThree.map((res, i) => (
+                              <span key={i} title={res}>{res === 'success' ? '✅' : '❌'}</span>
+                            ))}
                           </span>
                         )}
                       </button>
