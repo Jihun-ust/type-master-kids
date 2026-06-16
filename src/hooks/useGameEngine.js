@@ -16,6 +16,12 @@ export const useGameEngine = () => {
 
   const handleKeyDown = useCallback((e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
+    
+    // Prevent default scrolling when space is pressed
+    if (e.key === ' ') {
+      e.preventDefault();
+    }
+    
     if (e.key.length > 1) return;
 
     if (mistakeState) {
