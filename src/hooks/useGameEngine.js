@@ -7,11 +7,23 @@ export const useGameEngine = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [mistakeState, setMistakeState] = useState(false);
 
+  // Performance tracking state
+  const [mistakesInAttempt, setMistakesInAttempt] = useState(0);
+  const [levelProgress, setLevelProgress] = useState({});
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   useEffect(() => {
     const levelData = CURRICULUM[currentLevel];
     setSequence(generateSequence(levelData.keys, 10));
     setCurrentIndex(0);
     setMistakeState(false);
+    setMistakesInAttempt(0);
+  }, [currentLevel]);
+
+  const handleNextLevel = useCallback(() => {
+    setShowSuccessModal(false);
+    if (currentLevel + 1 < CURRICULUM.length) {
+      setCurrentLevel((prev) => prev + 1);
+    }
   }, [currentLevel]);
 
   const handleKeyDown = useCallback((e) => {
@@ -32,21 +44,40 @@ export const useGameEngine = () => {
     
     if (e.key === targetKey) {
       if (currentIndex + 1 >= sequence.length) {
+        // Sequence completed! Evaluate accuracy
+        if (mistakesInAttempt < 2) {
+          setLevelProgress((prev) => {
+            const currentProgress = prev[currentLevel] || 0;
+            const newProgress = Math.min(currentProgress + 1, 3);
+            if (newProgress === 3 && currentProgress < 3) {
+              setShowSuccessModal(true);
+            }
+            return { ...prev, [currentLevel]: newProgress };
+          });
+        }
+        
         const levelData = CURRICULUM[currentLevel];
         setSequence(generateSequence(levelData.keys, 10));
         setCurrentIndex(0);
+        setMistakesInAttempt(0);
       } else {
         setCurrentIndex((prev) => prev + 1);
       }
     } else {
       setMistakeState(true);
+      setMistakesInAttempt((prev) => prev + 1);
     }
-  }, [currentIndex, sequence, mistakeState, currentLevel]);
+  }, [currentIndex, sequence, mistakeState, currentLevel, mistakesInAttempt]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
+
+  const currentScore = sequence.length > 0 ? {
+    correct: Math.max(0, sequence.length - mistakesInAttempt),
+    total: sequence.length
+  } : null;
 
   return {
     currentLevel,
@@ -55,6 +86,10 @@ export const useGameEngine = () => {
     currentIndex,
     mistakeState,
     targetKey: sequence[currentIndex],
-    levels: CURRICULUM
+    levels: CURRICULUM,
+    levelProgress,
+    showSuccessModal,
+    handleNextLevel,
+    currentScore
   };
 };

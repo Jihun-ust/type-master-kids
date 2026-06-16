@@ -20,7 +20,11 @@ function App() {
     currentIndex,
     mistakeState,
     targetKey,
-    levels
+    levels,
+    levelProgress,
+    showSuccessModal,
+    handleNextLevel,
+    currentScore
   } = useGameEngine();
 
   return (
@@ -34,6 +38,11 @@ function App() {
       
       <div className="main-content">
         <main className="game-board">
+          <div className={`performance-banner ${currentScore ? 'visible' : ''}`}>
+            {currentScore 
+              ? `Score: ${currentScore.correct}/${currentScore.total}` 
+              : 'Score: --'}
+          </div>
           <TargetSequence 
             sequence={sequence} 
             currentIndex={currentIndex} 
@@ -59,21 +68,41 @@ function App() {
               <div key={group} className="level-group">
                 <h3 className="level-group-title">{group}</h3>
                 <div className="level-group-buttons">
-                  {groupLevels.map((lvl) => (
-                    <button 
-                      key={lvl.id} 
-                      className={`level-btn ${currentLevel === lvl.originalIndex ? 'active' : ''}`}
-                      onClick={() => setCurrentLevel(lvl.originalIndex)}
-                    >
-                      {lvl.display}
-                    </button>
-                  ))}
+                  {groupLevels.map((lvl) => {
+                    const checks = levelProgress[lvl.originalIndex] || 0;
+                    return (
+                      <button 
+                        key={lvl.id} 
+                        className={`level-btn ${currentLevel === lvl.originalIndex ? 'active' : ''}`}
+                        onClick={() => setCurrentLevel(lvl.originalIndex)}
+                      >
+                        <span className="level-name">{lvl.display}</span>
+                        {checks > 0 && (
+                          <span className="level-checks">
+                            {'✅'.repeat(checks)}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             ))}
           </div>
         </aside>
       </div>
+
+      {showSuccessModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>🎉 Level Complete!</h2>
+            <p>You've mastered this level. Keep up the great work!</p>
+            <button className="modal-btn" onClick={handleNextLevel}>
+              Okay
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
