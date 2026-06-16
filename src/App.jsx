@@ -2,6 +2,7 @@ import React from 'react';
 import { useGameEngine } from './hooks/useGameEngine';
 import { TargetSequence } from './components/TargetSequence';
 import { VirtualKeyboard } from './components/VirtualKeyboard';
+import { loadProgressFile, createNewSaveFile, saveProgressFile } from './utils/fileSystem';
 
 function App() {
   const [theme, setTheme] = React.useState('light');
@@ -22,18 +23,75 @@ function App() {
     targetKey,
     levels,
     levelProgress,
+    setLevelProgress,
     showSuccessModal,
     handleNextLevel,
-    currentScore
+    currentScore,
+    attemptCount
   } = useGameEngine();
+
+  const [fileHandle, setFileHandle] = React.useState(null);
+  const [userName, setUserName] = React.useState('');
+
+  const handleLoad = async () => {
+    const result = await loadProgressFile();
+    if (result) {
+      setFileHandle(result.fileHandle);
+      setUserName(result.data.userName || 'User');
+      if (result.data.levelProgress) {
+        setLevelProgress(result.data.levelProgress);
+      }
+      if (typeof result.data.currentLevel === 'number') {
+        setCurrentLevel(result.data.currentLevel);
+      }
+    }
+  };
+
+  const handleSave = async () => {
+    let handle = fileHandle;
+    let name = userName;
+    
+    if (!handle) {
+      name = window.prompt("Enter your name to save progress:", "Player");
+      if (!name) return; // User cancelled
+      
+      handle = await createNewSaveFile(name);
+      if (!handle) return; // Save picker cancelled
+      
+      setFileHandle(handle);
+      setUserName(name);
+    }
+    
+    await saveProgressFile(handle, {
+      userName: name,
+      currentLevel,
+      levelProgress
+    });
+  };
+
+  React.useEffect(() => {
+    // Auto-save when attemptCount changes, IF we have a file handle
+    if (fileHandle && attemptCount > 0) {
+      saveProgressFile(fileHandle, {
+        userName,
+        currentLevel,
+        levelProgress
+      });
+    }
+  }, [attemptCount, currentLevel, levelProgress, fileHandle, userName]);
 
   return (
     <div className="game-container">
       <header className="header">
         <h1>Type Master Kids</h1>
-        <button className="theme-toggle" onClick={toggleTheme}>
-          {theme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode'}
-        </button>
+        <div className="header-controls">
+          {userName && <span className="user-name">👤 {userName}</span>}
+          <button className="control-btn" onClick={handleLoad}>📂 Load</button>
+          <button className="control-btn" onClick={handleSave}>💾 Save</button>
+          <button className="theme-toggle control-btn" onClick={toggleTheme}>
+            {theme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode'}
+          </button>
+        </div>
       </header>
       
       <div className="main-content">

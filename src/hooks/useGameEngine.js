@@ -11,6 +11,8 @@ export const useGameEngine = () => {
   const [mistakesInAttempt, setMistakesInAttempt] = useState(0);
   const [levelProgress, setLevelProgress] = useState({});
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [attemptCount, setAttemptCount] = useState(0);
+
   useEffect(() => {
     const levelData = CURRICULUM[currentLevel];
     setSequence(generateSequence(levelData.keys, 10));
@@ -60,6 +62,7 @@ export const useGameEngine = () => {
         setSequence(generateSequence(levelData.keys, 10));
         setCurrentIndex(0);
         setMistakesInAttempt(0);
+        setAttemptCount(prev => prev + 1);
       } else {
         setCurrentIndex((prev) => prev + 1);
       }
@@ -88,8 +91,10 @@ export const useGameEngine = () => {
     targetKey: sequence[currentIndex],
     levels: CURRICULUM,
     levelProgress,
+    setLevelProgress,
     showSuccessModal,
     handleNextLevel,
-    currentScore
+    currentScore,
+    attemptCount
   };
 };

@@ -116,7 +116,21 @@ body {
   color: var(--text-title);
 }
 
-.theme-toggle {
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-name {
+  font-weight: 700;
+  color: var(--active-color);
+  background: var(--active-bg);
+  padding: 0.3rem 0.8rem;
+  border-radius: 12px;
+}
+
+.control-btn {
   padding: 0.5rem 1rem;
   border-radius: 20px;
   border: 1px solid var(--key-border);
@@ -130,8 +144,10 @@ body {
   align-items: center;
   gap: 0.5rem;
 }
-.theme-toggle:hover {
+
+.control-btn:hover {
   background-color: var(--surface-alt);
+  transform: translateY(-1px);
 }
 
 
