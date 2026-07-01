@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CURRICULUM, generateSequence } from '../constants/curriculum';
 
-export const useGameEngine = () => {
+export const useGameEngine = (isActive = true) => {
   const [currentLevel, setCurrentLevel] = useState(0);
   const [sequence, setSequence] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -29,6 +29,7 @@ export const useGameEngine = () => {
   }, [currentLevel]);
 
   const handleKeyDown = useCallback((e) => {
+    if (!isActive) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     
     // Prevent default scrolling when space is pressed
@@ -83,7 +84,7 @@ export const useGameEngine = () => {
       setMistakeState(true);
       setMistakesInAttempt((prev) => prev + 1);
     }
-  }, [currentIndex, sequence, mistakeState, currentLevel, mistakesInAttempt]);
+  }, [isActive, currentIndex, sequence, mistakeState, currentLevel, mistakesInAttempt]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
