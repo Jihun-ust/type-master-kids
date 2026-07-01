@@ -642,7 +642,7 @@ body {
 }
 
 .char-current {
-  color: var(--text-main);
+  color: var(--active-color);
 }
 
 .char-current::after {
