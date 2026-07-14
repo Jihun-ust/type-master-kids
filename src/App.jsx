@@ -161,7 +161,7 @@ function App() {
         currentLevel,
         levelProgress,
         bestScores
-      });
+      }, true);
     }
   }, [attemptCount, currentLevel, levelProgress, bestScores, fileHandle, userName]);
 
