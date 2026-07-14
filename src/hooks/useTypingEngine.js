@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 export const useTypingEngine = (targetText, onComplete) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [typedResult, setTypedResult] = useState([]);
+  const [typedKeys, setTypedKeys] = useState([]);
   const [startTime, setStartTime] = useState(null);
   const [endTime, setEndTime] = useState(null);
 
@@ -11,10 +12,28 @@ export const useTypingEngine = (targetText, onComplete) => {
   const [timeElapsed, setTimeElapsed] = useState(0);
 
   const handleKeyDown = useCallback((e) => {
-    if (currentIndex >= targetText.length || endTime) return;
+    if (endTime) return;
+
+    if (e.key === 'Backspace') {
+      if (currentIndex > 0) {
+        setTypedResult(prev => prev.slice(0, -1));
+        setTypedKeys(prev => prev.slice(0, -1));
+        setCurrentIndex(prev => prev - 1);
+      }
+      return;
+    }
+
+    if (e.key === ' ') {
+      e.preventDefault(); // Prevent scrolling or clicking focused buttons
+    }
+
+    if (currentIndex >= targetText.length) return;
 
     // Ignore modifiers and non-character keys (like Shift, CapsLock, Tab, etc.)
     if (e.key.length !== 1) return;
+
+    // Ignore keyboard shortcuts
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
 
     if (!startTime) {
       setStartTime(Date.now());
@@ -24,12 +43,14 @@ export const useTypingEngine = (targetText, onComplete) => {
     const isCorrect = e.key === expectedChar;
 
     const newTypedResult = [...typedResult, isCorrect ? 'correct' : 'wrong'];
+    const newTypedKeys = [...typedKeys, e.key];
     setTypedResult(newTypedResult);
+    setTypedKeys(newTypedKeys);
     
     const newIndex = currentIndex + 1;
     setCurrentIndex(newIndex);
 
-    if (newIndex >= targetText.length) {
+    if (newIndex >= targetText.length && isCorrect) {
       const finishTime = Date.now();
       setEndTime(finishTime);
       
@@ -46,7 +67,7 @@ export const useTypingEngine = (targetText, onComplete) => {
         });
       }
     }
-  }, [currentIndex, targetText, startTime, endTime, typedResult, onComplete]);
+  }, [currentIndex, targetText, startTime, endTime, typedResult, typedKeys, onComplete]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -62,7 +83,7 @@ export const useTypingEngine = (targetText, onComplete) => {
         const elapsedMinutes = (now - startTime) / 60000;
         const correctCount = typedResult.filter(r => r === 'correct').length;
         const currentWpm = Math.round((correctCount / 5) / elapsedMinutes);
-        const currentAccuracy = Math.round((correctCount / typedResult.length) * 100) || 100;
+        const currentAccuracy = typedResult.length === 0 ? 100 : Math.round((correctCount / typedResult.length) * 100);
         
         setWpm(currentWpm);
         setAccuracy(currentAccuracy);
@@ -72,7 +93,7 @@ export const useTypingEngine = (targetText, onComplete) => {
        const elapsedMinutes = (endTime - startTime) / 60000;
        const correctCount = typedResult.filter(r => r === 'correct').length;
        const currentWpm = Math.round((correctCount / 5) / elapsedMinutes);
-       const currentAccuracy = Math.round((correctCount / typedResult.length) * 100) || 100;
+       const currentAccuracy = typedResult.length === 0 ? 100 : Math.round((correctCount / typedResult.length) * 100);
        
        setWpm(currentWpm);
        setAccuracy(currentAccuracy);
@@ -84,6 +105,7 @@ export const useTypingEngine = (targetText, onComplete) => {
   const reset = useCallback(() => {
     setCurrentIndex(0);
     setTypedResult([]);
+    setTypedKeys([]);
     setStartTime(null);
     setEndTime(null);
     setWpm(0);
@@ -91,10 +113,15 @@ export const useTypingEngine = (targetText, onComplete) => {
     setTimeElapsed(0);
   }, []);
 
+  useEffect(() => {
+    reset();
+  }, [targetText, reset]);
+
   return {
     targetText,
     currentIndex,
     typedResult,
+    typedKeys,
     wpm,
     accuracy,
     timeElapsed,

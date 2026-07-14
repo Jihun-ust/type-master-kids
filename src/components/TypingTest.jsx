@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTypingEngine } from '../hooks/useTypingEngine';
 import { getRandomText } from '../constants/textPools';
-import { decomposeToEnglishKeys, EN_TO_KOR_MAP, getKeystrokeRanges } from '../utils/hangul';
+import { decomposeToEnglishKeys, EN_TO_KOR_MAP, getKeystrokeRanges, assembleFromEnglishKeys } from '../utils/hangul';
 
 export function TypingTest({ mode, language, bestScore, bestPerfectScore, onUpdateBestScore }) {
   const [originalText, setOriginalText] = useState("");
@@ -22,6 +22,7 @@ export function TypingTest({ mode, language, bestScore, bestPerfectScore, onUpda
     currentIndex,
     typedResult,
     wpm,
+    typedKeys,
     accuracy,
     timeElapsed,
     isFinished,
@@ -43,7 +44,7 @@ export function TypingTest({ mode, language, bestScore, bestPerfectScore, onUpda
   if (!targetText) return null;
 
   return (
-    <div className="typing-test-container">
+    <div className={`typing-test-container ${language === 'ko' && mode === 'challenge' ? 'ko-challenge-container' : ''}`}>
       <div className="typing-stats-header">
         <div className="stat-box">
           <span className="stat-label">Speed</span>
@@ -59,7 +60,7 @@ export function TypingTest({ mode, language, bestScore, bestPerfectScore, onUpda
         </div>
       </div>
 
-      <div className="typing-text-display">
+      <div className={`typing-text-display ${language === 'ko' && mode === 'challenge' ? 'ko-challenge-display' : ''}`}>
         {language === 'ko' ? (
           ranges.map((range, index) => {
             let className = "char-untyped";
@@ -94,6 +95,31 @@ export function TypingTest({ mode, language, bestScore, bestPerfectScore, onUpda
           })
         )}
       </div>
+
+      {language === 'ko' && (
+        <div className={`typing-text-display progress-display ${mode === 'challenge' ? 'ko-challenge-display' : ''}`} style={{ marginTop: '1rem' }}>
+          {ranges.map((range, index) => {
+            if (currentIndex <= range.startIndex) {
+              return <span key={`prog-${index}`} className="typing-char" style={{ opacity: 0 }}>{range.char}</span>;
+            }
+            
+            const maxIdx = Math.min(currentIndex, range.endIndex + 1);
+            const keysForChar = typedKeys.slice(range.startIndex, maxIdx);
+            const composed = assembleFromEnglishKeys(keysForChar);
+            
+            const resultsForChar = typedResult.slice(range.startIndex, maxIdx);
+            const hasWrong = resultsForChar.includes('wrong');
+            
+            let className = hasWrong ? "char-wrong" : "char-correct";
+            
+            return (
+              <span key={`prog-${index}`} className={`typing-char ${className}`}>
+                {composed}
+              </span>
+            );
+          })}
+        </div>
+      )}
 
       <aside className="high-scores-badge">
         <h3>🏆 Best Scores</h3>

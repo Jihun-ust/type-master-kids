@@ -58,3 +58,81 @@ export function getKeystrokeRanges(text) {
   
   return ranges;
 }
+
+export function assembleFromEnglishKeys(keysArr) {
+  if (!keysArr || keysArr.length === 0) return '';
+  
+  let result = '';
+  let i = 0;
+  
+  while (i < keysArr.length) {
+    let choChar = keysArr[i];
+    let choIndex = CHO_EN.indexOf(choChar);
+    
+    if (choIndex === -1) {
+      result += EN_TO_KOR_MAP[choChar] || choChar;
+      i++;
+      continue;
+    }
+    
+    i++;
+    if (i >= keysArr.length) {
+      result += EN_TO_KOR_MAP[choChar] || choChar;
+      break;
+    }
+    
+    let jungChar1 = keysArr[i];
+    let jungChar2 = (i + 1 < keysArr.length) ? keysArr[i + 1] : '';
+    let jungIndex = -1;
+    let jungLen = 0;
+    
+    if (jungChar2 && JUNG_EN.indexOf(jungChar1 + jungChar2) !== -1) {
+      jungIndex = JUNG_EN.indexOf(jungChar1 + jungChar2);
+      jungLen = 2;
+    } else if (JUNG_EN.indexOf(jungChar1) !== -1) {
+      jungIndex = JUNG_EN.indexOf(jungChar1);
+      jungLen = 1;
+    }
+    
+    if (jungIndex === -1) {
+      result += EN_TO_KOR_MAP[choChar] || choChar;
+      continue;
+    }
+    
+    i += jungLen;
+    
+    let jongIndex = 0;
+    let jongLen = 0;
+    
+    if (i < keysArr.length) {
+      let jongChar1 = keysArr[i];
+      let jongChar2 = (i + 1 < keysArr.length) ? keysArr[i + 1] : '';
+      
+      if (jongChar2 && JONG_EN.indexOf(jongChar1 + jongChar2) !== -1) {
+        let charAfterJong2 = (i + 2 < keysArr.length) ? keysArr[i + 2] : '';
+        if (charAfterJong2 && JUNG_EN.indexOf(charAfterJong2) !== -1) {
+           jongIndex = JONG_EN.indexOf(jongChar1);
+           jongLen = 1;
+        } else {
+           jongIndex = JONG_EN.indexOf(jongChar1 + jongChar2);
+           jongLen = 2;
+        }
+      } else if (JONG_EN.indexOf(jongChar1) !== -1) {
+        if (jongChar2 && JUNG_EN.indexOf(jongChar2) !== -1) {
+           jongIndex = 0;
+           jongLen = 0;
+        } else {
+           jongIndex = JONG_EN.indexOf(jongChar1);
+           jongLen = 1;
+        }
+      }
+    }
+    
+    i += jongLen;
+    
+    let unicode = 0xAC00 + (choIndex * 588) + (jungIndex * 28) + jongIndex;
+    result += String.fromCharCode(unicode);
+  }
+  
+  return result;
+}
