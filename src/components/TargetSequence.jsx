@@ -1,6 +1,7 @@
 import React from 'react';
+import { EN_TO_KOR_MAP } from '../utils/hangul';
 
-export const TargetSequence = ({ sequence, currentIndex, mistakeState }) => {
+export const TargetSequence = ({ sequence, currentIndex, mistakeState, language }) => {
   return (
     <div className="target-sequence">
       {sequence.map((char, index) => {
@@ -15,9 +16,11 @@ export const TargetSequence = ({ sequence, currentIndex, mistakeState }) => {
           className += " past";
         }
 
+        const displayChar = (language === 'ko' && EN_TO_KOR_MAP[char]) ? EN_TO_KOR_MAP[char] : char;
+
         return (
           <div key={index} className={className}>
-            {char}
+            {displayChar}
           </div>
         );
       })}

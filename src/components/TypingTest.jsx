@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useTypingEngine } from '../hooks/useTypingEngine';
 import { getRandomText } from '../constants/textPools';
+import { decomposeToEnglishKeys, EN_TO_KOR_MAP, getKeystrokeRanges } from '../utils/hangul';
 
-export function TypingTest({ mode, bestScore, bestPerfectScore, onUpdateBestScore }) {
+export function TypingTest({ mode, language, bestScore, bestPerfectScore, onUpdateBestScore }) {
+  const [originalText, setOriginalText] = useState("");
   const [targetText, setTargetText] = useState("");
 
   // Initialize or change text when mode switches
   useEffect(() => {
-    setTargetText(getRandomText(mode === 'challenge' ? 'paragraph' : 'sentence'));
-  }, [mode]);
+    const text = getRandomText(mode === 'challenge' ? 'paragraph' : 'sentence', language);
+    setOriginalText(text);
+    setTargetText(language === 'ko' ? decomposeToEnglishKeys(text) : text);
+  }, [mode, language]);
 
   const handleComplete = (stats) => {
     onUpdateBestScore(mode, stats.wpm, stats.accuracy);
@@ -24,8 +28,14 @@ export function TypingTest({ mode, bestScore, bestPerfectScore, onUpdateBestScor
     reset
   } = useTypingEngine(targetText, handleComplete);
 
+  const ranges = React.useMemo(() => {
+    return language === 'ko' ? getKeystrokeRanges(originalText) : [];
+  }, [originalText, language]);
+
   const handleNext = () => {
-    setTargetText(getRandomText(mode === 'challenge' ? 'paragraph' : 'sentence'));
+    const text = getRandomText(mode === 'challenge' ? 'paragraph' : 'sentence', language);
+    setOriginalText(text);
+    setTargetText(language === 'ko' ? decomposeToEnglishKeys(text) : text);
     reset();
   };
 
@@ -50,20 +60,39 @@ export function TypingTest({ mode, bestScore, bestPerfectScore, onUpdateBestScor
       </div>
 
       <div className="typing-text-display">
-        {targetText.split('').map((char, index) => {
-          let className = "char-untyped";
-          if (index < currentIndex) {
-            className = typedResult[index] === 'correct' ? "char-correct" : "char-wrong";
-          } else if (index === currentIndex && !isFinished) {
-            className = "char-current";
-          }
+        {language === 'ko' ? (
+          ranges.map((range, index) => {
+            let className = "char-untyped";
+            
+            if (currentIndex > range.endIndex) {
+              const isCorrect = typedResult.slice(range.startIndex, range.endIndex + 1).every(res => res === 'correct');
+              className = isCorrect ? "char-correct" : "char-wrong";
+            } else if (currentIndex >= range.startIndex && currentIndex <= range.endIndex && !isFinished) {
+              className = "char-current";
+            }
+            
+            return (
+              <span key={index} className={`typing-char ${className}`}>
+                {range.char}
+              </span>
+            );
+          })
+        ) : (
+          targetText.split('').map((char, index) => {
+            let className = "char-untyped";
+            if (index < currentIndex) {
+              className = typedResult[index] === 'correct' ? "char-correct" : "char-wrong";
+            } else if (index === currentIndex && !isFinished) {
+              className = "char-current";
+            }
 
-          return (
-            <span key={index} className={`typing-char ${className}`}>
-              {char}
-            </span>
-          );
-        })}
+            return (
+              <span key={index} className={`typing-char ${className}`}>
+                {char}
+              </span>
+            );
+          })
+        )}
       </div>
 
       <aside className="high-scores-badge">

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CURRICULUM, generateSequence } from '../constants/curriculum';
 
-export const useGameEngine = (isActive = true) => {
+export const useGameEngine = (isActive = true, language = 'en') => {
   const [currentLevel, setCurrentLevel] = useState(0);
   const [sequence, setSequence] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -9,7 +9,7 @@ export const useGameEngine = (isActive = true) => {
 
   // Performance tracking state
   const [mistakesInAttempt, setMistakesInAttempt] = useState(0);
-  const [levelProgress, setLevelProgress] = useState({});
+  const [levelProgress, setLevelProgress] = useState({ en: {}, ko: {} });
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [attemptCount, setAttemptCount] = useState(0);
 
@@ -51,25 +51,28 @@ export const useGameEngine = (isActive = true) => {
         const result = mistakesInAttempt < 2 ? 'success' : 'fail';
         
         setLevelProgress((prev) => {
-          const currentProgress = prev[currentLevel] || [];
-          // Ensure migration from old number format if needed (handled mostly in load, but just in case)
+          const currentLanguageProgress = prev[language] || {};
+          const currentProgress = currentLanguageProgress[currentLevel] || [];
+          
           const history = Array.isArray(currentProgress) ? currentProgress : Array(currentProgress).fill('success');
           
           const newHistory = [...history, result];
           const lastThree = newHistory.slice(-3);
           
           if (lastThree.length === 3 && lastThree.every(r => r === 'success') && history.length < newHistory.length) {
-             // Only show modal if they just hit 3 successes (this prevents spamming modal if they play after 3 successes, though usually they move on)
-             // Wait, if they already have 3 successes, maybe they play again. Let's just pop it if last 3 are success.
-             // Actually, if they play again and get a 4th success, the last 3 are still success. We might show it again.
-             // That's fine for now, or we can check if `history`'s last 3 weren't all success.
              const oldLastThree = history.slice(-3);
              const oldWasSuccess = oldLastThree.length === 3 && oldLastThree.every(r => r === 'success');
              if (!oldWasSuccess) {
                setShowSuccessModal(true);
              }
           }
-          return { ...prev, [currentLevel]: lastThree };
+          return {
+            ...prev,
+            [language]: {
+              ...currentLanguageProgress,
+              [currentLevel]: lastThree
+            }
+          };
         });
         
         const levelData = CURRICULUM[currentLevel];
@@ -84,7 +87,7 @@ export const useGameEngine = (isActive = true) => {
       setMistakeState(true);
       setMistakesInAttempt((prev) => prev + 1);
     }
-  }, [isActive, currentIndex, sequence, mistakeState, currentLevel, mistakesInAttempt]);
+  }, [isActive, language, currentIndex, sequence, mistakeState, currentLevel, mistakesInAttempt]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);

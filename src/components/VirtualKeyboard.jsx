@@ -1,5 +1,6 @@
 import React from 'react';
 import { HandsOverlay } from './HandsOverlay';
+import { EN_TO_KOR_MAP } from '../utils/hangul';
 
 const KEYBOARD_ROWS = [
   ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
@@ -8,7 +9,7 @@ const KEYBOARD_ROWS = [
   [' ']
 ];
 
-export const VirtualKeyboard = ({ targetKey }) => {
+export const VirtualKeyboard = ({ targetKey, language }) => {
   return (
     <div className="virtual-keyboard-container">
       <div className="keyboard">
@@ -18,7 +19,14 @@ export const VirtualKeyboard = ({ targetKey }) => {
               const isActive = key === targetKey;
               return (
                 <div key={key} className={`key ${key === ' ' ? 'space-key' : ''} ${isActive ? 'active' : ''}`}>
-                  {key === ' ' ? '' : key}
+                  {key === ' ' ? '' : (
+                    language === 'ko' && EN_TO_KOR_MAP[key] ? (
+                      <div className="key-labels">
+                        <span className="ko-label">{EN_TO_KOR_MAP[key]}</span>
+                        <span className="en-label">{key}</span>
+                      </div>
+                    ) : key
+                  )}
                   {isActive && <div className="ripple-effect" />}
                 </div>
               );

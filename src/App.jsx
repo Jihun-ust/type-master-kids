@@ -4,12 +4,51 @@ import { TargetSequence } from './components/TargetSequence';
 import { VirtualKeyboard } from './components/VirtualKeyboard';
 import { TypingTest } from './components/TypingTest';
 import { loadProgressFile, createNewSaveFile, saveProgressFile } from './utils/fileSystem';
+import { EN_TO_KOR_MAP } from './utils/hangul';
+
+const translateLevelName = (name, language) => {
+  if (language === 'en') return name;
+  
+  let translated = name;
+  translated = translated.replace('Top-Home Combo', '윗글쇠-기본 자리 혼합');
+  translated = translated.replace('Bottom-Home Combo', '아래글쇠-기본 자리 혼합');
+  translated = translated.replace('Top-Bottom Combo', '윗글쇠-아래글쇠 혼합');
+  translated = translated.replace('Home Row Full', '기본 자리 전체');
+  translated = translated.replace('Top Row Full', '윗글쇠 자리 전체');
+  translated = translated.replace('Bottom Row Full', '아래글쇠 자리 전체');
+  translated = translated.replace('Home Row', '기본 자리');
+  translated = translated.replace('Top Row', '윗글쇠 자리');
+  translated = translated.replace('Bottom Row', '아래글쇠 자리');
+  translated = translated.replace('All Rows', '전체 자리');
+  translated = translated.replace('Space', '띄어쓰기');
+  translated = translated.replace('Left Top, Right Home', '왼손 윗글쇠, 오른손 기본 자리');
+  translated = translated.replace('Left Home, Right Top', '왼손 기본 자리, 오른손 윗글쇠');
+  translated = translated.replace('All Keys Top and Home', '윗글쇠, 기본 자리 전체');
+  translated = translated.replace('Left Bottom, Right Home', '왼손 아래글쇠, 오른손 기본 자리');
+  translated = translated.replace('Left Home, Right Bottom', '왼손 기본 자리, 오른손 아래글쇠');
+  translated = translated.replace('All Keys Bottom and Home', '아래글쇠, 기본 자리 전체');
+  translated = translated.replace('Left Bottom, Right Top', '왼손 아래글쇠, 오른손 윗글쇠');
+  translated = translated.replace('Left Top, Right Bottom', '왼손 윗글쇠, 오른손 아래글쇠');
+  translated = translated.replace('All Keys Top, Home and Bottom', '전체 자리');
+
+  // Replace single uppercase English characters with mapped Korean characters
+  translated = translated.replace(/[A-Z]/g, match => EN_TO_KOR_MAP[match.toLowerCase()] || match);
+
+  return translated;
+};
 
 function App() {
   const [theme, setTheme] = React.useState('light');
+  const [language, setLanguage] = React.useState('en');
+
+
 
   const toggleTheme = () => {
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
+
+  const toggleLanguage = () => {
+    setLanguage(prev => prev === 'en' ? 'ko' : 'en');
   };
 
   React.useEffect(() => {
@@ -17,8 +56,8 @@ function App() {
   }, [theme]);
   const [currentMode, setCurrentMode] = React.useState('practice');
   const [bestScores, setBestScores] = React.useState({
-    play: { wpm: 0, perfect: 0 },
-    challenge: { wpm: 0, perfect: 0 }
+    en: { play: { wpm: 0, perfect: 0 }, challenge: { wpm: 0, perfect: 0 } },
+    ko: { play: { wpm: 0, perfect: 0 }, challenge: { wpm: 0, perfect: 0 } }
   });
 
   const {
@@ -35,7 +74,7 @@ function App() {
     handleNextLevel,
     currentScore,
     attemptCount
-  } = useGameEngine(currentMode === 'practice');
+  } = useGameEngine(currentMode === 'practice', language);
 
   const [fileHandle, setFileHandle] = React.useState(null);
   const [userName, setUserName] = React.useState('');
@@ -46,10 +85,13 @@ function App() {
       setFileHandle(result.fileHandle);
       setUserName(result.data.userName || 'User');
       if (result.data.levelProgress) {
-        // Migration logic: convert old number-based progress to arrays
-        const migratedProgress = {};
-        for (const [key, val] of Object.entries(result.data.levelProgress)) {
-          migratedProgress[key] = Array.isArray(val) ? val : Array(val).fill('success');
+        let migratedProgress = { en: {}, ko: {} };
+        if (result.data.levelProgress.en || result.data.levelProgress.ko) {
+          migratedProgress = { ...migratedProgress, ...result.data.levelProgress };
+        } else {
+          for (const [key, val] of Object.entries(result.data.levelProgress)) {
+            migratedProgress.en[key] = Array.isArray(val) ? val : Array(val).fill('success');
+          }
         }
         setLevelProgress(migratedProgress);
       }
@@ -57,7 +99,16 @@ function App() {
         setCurrentLevel(result.data.currentLevel);
       }
       if (result.data.bestScores) {
-        setBestScores(result.data.bestScores);
+        let migratedScores = {
+          en: { play: { wpm: 0, perfect: 0 }, challenge: { wpm: 0, perfect: 0 } },
+          ko: { play: { wpm: 0, perfect: 0 }, challenge: { wpm: 0, perfect: 0 } }
+        };
+        if (result.data.bestScores.en || result.data.bestScores.ko) {
+          migratedScores = { ...migratedScores, ...result.data.bestScores };
+        } else {
+          migratedScores.en = result.data.bestScores;
+        }
+        setBestScores(migratedScores);
       }
     }
   };
@@ -87,12 +138,16 @@ function App() {
 
   const handleUpdateBestScore = (mode, wpm, accuracy) => {
     setBestScores(prev => {
-      const currentStats = prev[mode];
+      const languageStats = prev[language] || { play: { wpm: 0, perfect: 0 }, challenge: { wpm: 0, perfect: 0 } };
+      const currentStats = languageStats[mode] || { wpm: 0, perfect: 0 };
       const newWpm = Math.max(currentStats.wpm, wpm);
       const newPerfect = Math.max(currentStats.perfect, accuracy === 100 ? wpm : 0);
       return {
         ...prev,
-        [mode]: { wpm: newWpm, perfect: newPerfect }
+        [language]: {
+          ...languageStats,
+          [mode]: { wpm: newWpm, perfect: newPerfect }
+        }
       };
     });
   };
@@ -125,6 +180,9 @@ function App() {
           {userName && <span className="user-name">👤 {userName}</span>}
           <button className="control-btn" onClick={handleLoad}>📂 Load</button>
           <button className="control-btn" onClick={handleSave}>💾 Save</button>
+          <button className="theme-toggle control-btn" onClick={toggleLanguage}>
+            {language === 'en' ? '🇺🇸 EN' : '🇰🇷 KO'}
+          </button>
           <button className="theme-toggle control-btn" onClick={toggleTheme}>
             {theme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode'}
           </button>
@@ -143,9 +201,10 @@ function App() {
               sequence={sequence} 
               currentIndex={currentIndex} 
               mistakeState={mistakeState} 
+              language={language}
             />
             
-            <VirtualKeyboard targetKey={targetKey} />
+            <VirtualKeyboard targetKey={targetKey} language={language} />
           </main>
           
           <aside className="level-sidebar">
@@ -156,8 +215,12 @@ function App() {
                   const [groupName, levelName] = lvl.name.split(': ');
                   const group = levelName ? groupName : 'Other';
                   const display = levelName || lvl.name;
-                  if (!acc[group]) acc[group] = [];
-                  acc[group].push({ ...lvl, originalIndex: idx, display });
+                  
+                  const translatedGroup = translateLevelName(group, language);
+                  const translatedDisplay = translateLevelName(display, language);
+                  
+                  if (!acc[translatedGroup]) acc[translatedGroup] = [];
+                  acc[translatedGroup].push({ ...lvl, originalIndex: idx, display: translatedDisplay });
                   return acc;
                 }, {})
               ).map(([group, groupLevels]) => (
@@ -165,7 +228,7 @@ function App() {
                   <h3 className="level-group-title">{group}</h3>
                   <div className="level-group-buttons">
                     {groupLevels.map((lvl) => {
-                      const history = levelProgress[lvl.originalIndex];
+                      const history = levelProgress[language]?.[lvl.originalIndex] || [];
                       const safeHistory = Array.isArray(history) ? history : Array(history || 0).fill('success');
                       const lastThree = safeHistory.slice(-3);
                       return (
@@ -194,8 +257,9 @@ function App() {
       ) : (
         <TypingTest 
           mode={currentMode}
-          bestScore={bestScores[currentMode]?.wpm}
-          bestPerfectScore={bestScores[currentMode]?.perfect}
+          language={language}
+          bestScore={bestScores[language]?.[currentMode]?.wpm}
+          bestPerfectScore={bestScores[language]?.[currentMode]?.perfect}
           onUpdateBestScore={handleUpdateBestScore}
         />
       )}
